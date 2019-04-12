@@ -1,11 +1,15 @@
 # -*- coding:utf-8 -*-
-from urllib.request import urlopen
-from urllib.request import urlretrieve
-from urllib.parse import urljoin
+from urllib import urlopen
+from urllib import urlretrieve
+from urlparse import urljoin
 from bs4 import BeautifulSoup
 import os
 import tomd
+import re
 
+import sys
+reload(sys)
+sys.setdefaultencoding( "utf-8" )
 
 # Parse one page's articles.
 def parse_page(bsObj, url):
@@ -67,12 +71,34 @@ def replace_deny_char(title):
     return title
 
 
-print('Please input your CSDN name:')
-name = input()
-url = 'http://blog.csdn.net/%s' % name
-blogCount = 0
 
-while True:
+def write_md(url, md_count):
+    html = urlopen(url)
+    bsObj = BeautifulSoup(html, 'html.parser')
+
+    title = bsObj.find('div', {'class': 'article-title-box'})
+    title_convert = (title.h1).get_text()
+    # print(title)
+    # title_convert = tomd.convert(title.prettify())
+
+    md = bsObj.find('div', {'class': 'article_content'})
+    # print(md.prettify())
+    convert = tomd.convert(md.prettify())
+    md_name = str(md_count) + '.md'
+    with open(md_name, 'w') as f:
+        f.write(title_convert)
+        f.write(convert)
+
+
+if __name__ == '__main__':
+
+    # print('Please input your CSDN name:')
+    # name = input()
+    # url = 'http://blog.csdn.net/%s' % name
+    url = 'https://blog.csdn.net/wydbyxr'
+    blogCount = 0
+    md_count = 0
+
     # 1. Open new page.
     html = urlopen(url)
     bsObj = BeautifulSoup(html, 'html.parser')
@@ -81,9 +107,32 @@ while True:
     # 2. Crawl every article.
     parse_page(bsObj, url)
 
+    all_url = bsObj.find_all('div', {'class': 'article-item-box csdn-tracking-statistics'})
+    for paper_url in all_url:
+        html_url = (paper_url.a).attrs['href']
+        str_url = html_url.encode('raw_unicode_escape')
+
+        # matchobj = re.match("wydbyxr", str_url)
+        # if matchobj is None:
+
+        if 'wydbyxr' in str_url:
+            # tmp_url='https://blog.csdn.net/wydbyxr/article/details/81024079'
+            write_md(str_url, md_count)
+            md_count = md_count + 1
+
+
+
+
+
+
+
+
+
     # 3. Move to next page.
-    next_url = bsObj.find('a', text='下一页')
-    if next_url is not None:
-        url = urljoin(url, next_url.attrs['href'])
-    else:
-        break
+
+
+    # next_url = bsObj.find('a', text='下一页')
+    # if next_url is not None:
+    #     url = urljoin(url, next_url.attrs['href'])
+    # else:
+    #     break
